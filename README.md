@@ -2,12 +2,31 @@
 
 This is a TypeScript implementation of the JSON Edit Distance (JEDI) algorithm, as proposed in the paper [JEDI: These aren't the JSON documents you're looking for... (Extended Version)](https://arxiv.org/pdf/2201.08099).
 
+## Installation
+
+You can install the package from the GitHub registry using npm, pnpm, or yarn:
+
+### npm
+```sh
+npm install @aeye-sa/jedi-ts --registry=https://npm.pkg.github.com
+```
+
+### pnpm
+```sh
+pnpm add @aeye-sa/jedi-ts --registry=https://npm.pkg.github.com
+```
+
+### yarn
+```sh
+yarn add @aeye-sa/jedi-ts --registry=https://npm.pkg.github.com
+```
+
 ## Usage
 
 The package default exports a `jediMetric` function that calculates the similarity between two JSON structures using the JEDI distance metric. You can use this function as follows:
 
 ```javascript
-import jediMetric from 'jedi-ts';
+import jediMetric from '@aeye-sa/jedi-ts';
 
 const output = { ... };
 const expected = { ... };

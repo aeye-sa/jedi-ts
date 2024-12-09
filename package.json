@@ -1,5 +1,9 @@
 {
-  "name": "jedi-ts",
+  "name": "@aeye-sa/jedi-ts",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://npm.pkg.github.com"
+  },
   "version": "1.0.0",
   "description": "A typescript implementation of JSON Edit dIstance, as described in the paper \"JEDI: These aren't the JSON documents you're looking for...\"",
   "type": "module",
