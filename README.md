@@ -1,6 +1,6 @@
 # `jedi-ts`: These aren't the JSON documents you're looking for...
 
-This is a TypeScript implementation of the JSON Edit Distance (JEDI) algorithm, as proposed in the paper [JEDI: These aren't the JSON documents you're looking for... (Extended Version)](https://arxiv.org/pdf/2201.08099).
+This is a TypeScript implementation of the unoptimised baseline JSON Edit Distance (JEDI) algorithm, as proposed in the paper [JEDI: These aren't the JSON documents you're looking for... (Extended Version)](https://arxiv.org/pdf/2201.08099).
 
 This implementation extends the original JEDI algorithm with abilities some consider to be... unnatural. Like a well-trained Jedi sensing disturbances in the Force, it can detect subtle differences between strings that a simple binary comparison would miss. Fear not, for this path does not lead to the dark side - it merely brings more balance to your JSON comparisons.
 
