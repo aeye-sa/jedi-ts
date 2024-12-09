@@ -1,0 +1,63 @@
+{
+  "name": "jedi-ts",
+  "version": "1.0.0",
+  "description": "A typescript implementation of JSON Edit dIstance, as described in the paper \"JEDI: These aren't the JSON documents you're looking for...\"",
+  "type": "module",
+  "keywords": [
+    "json",
+    "edit",
+    "distance",
+    "jedi"
+  ],
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "types": "src/index.ts",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "build": "npm run build:esm && npm run build:cjs",
+    "build:esm": "esbuild \"src/**/*.ts\" --sourcemap=inline --outdir=dist --format=esm",
+    "watch:esm": "esbuild \"src/**/*.ts\" --sourcemap=inline --outdir=dist --format=esm --watch",
+    "build:cjs": "esbuild \"src/**/*.ts\" --sourcemap=inline --outdir=dist --out-extension:.js=.cjs --format=cjs",
+    "watch:cjs": "esbuild \"src/**/*.ts\" --sourcemap=inline --outdir=dist --out-extension:.js=.cjs --format=cjs --watch",
+    "prepublishOnly": "npm run build",
+    "test": "vitest",
+    "coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit -p tsconfig.build.json",
+    "typecheck:watch": "tsc --noEmit -p tsconfig.build.json --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/aeye-sa/jedi-ts.git"
+  },
+  "author": "aeye-sa",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/aeye-sa/jedi-ts/issues"
+  },
+  "homepage": "https://github.com/aeye-sa/jedi-ts#readme",
+  "devDependencies": {
+    "@eslint/js": "^9.16.0",
+    "@stylistic/eslint-plugin": "^2.11.0",
+    "@stylistic/eslint-plugin-ts": "^2.11.0",
+    "@types/eslint__js": "^8.42.3",
+    "@types/node": "^22.10.1",
+    "@typescript-eslint/eslint-plugin": "^8.17.0",
+    "@typescript-eslint/parser": "^8.17.0",
+    "esbuild": "^0.24.0",
+    "eslint": "^9.16.0",
+    "tslib": "^2.8.1",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.17.0",
+    "vitest": "^2.1.8"
+  }
+}
