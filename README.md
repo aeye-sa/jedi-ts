@@ -7,7 +7,7 @@ This is a TypeScript implementation of the JSON Edit Distance (JEDI) algorithm, 
 The package default exports a `jediMetric` function that calculates the similarity between two JSON structures using the JEDI distance metric. You can use this function as follows:
 
 ```javascript
-import jediMetric from './jedi';
+import jediMetric from 'jedi-ts';
 
 const output = { ... };
 const expected = { ... };
