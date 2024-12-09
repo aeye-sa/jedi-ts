@@ -397,3 +397,230 @@ describe("JEDI Metric", () => {
         expect(renameSim).toBeLessThan(modifySim);
     });
 });
+
+describe("JEDI Metric with Weighted String Distance", () => {
+    test("should give higher similarity for similar strings", () => {
+        const obj1 = { name: "John Smith" };
+        const obj2 = { name: "Jon Smith" };
+        const obj3 = { name: "Robert Jones" };
+
+        const sim1 = jediMetric(obj1, obj2, true);
+        const sim2 = jediMetric(obj1, obj3, true);
+
+        // "John Smith" vs "Jon Smith" should have higher similarity
+        // than "John Smith" vs "Robert Jones"
+        expect(sim1).toBeGreaterThan(sim2);
+    });
+
+    test("should handle key name similarities", () => {
+        const obj1 = { userProfile: { value: 123 } };
+        const obj2 = { user_profile: { value: 123 } };
+        const obj3 = { accountSettings: { value: 123 } };
+
+        const sim1 = jediMetric(obj1, obj2, true);
+        const sim2 = jediMetric(obj1, obj3, true);
+
+        // "userProfile" vs "user_profile" should have higher similarity
+        // than "userProfile" vs "accountSettings"
+        expect(sim1).toBeGreaterThan(sim2);
+    });
+
+    test("should compare weighted vs non-weighted differences", () => {
+        const obj1 = { description: "This is a test message" };
+        const obj2 = { description: "This is a test mesage" }; // Single letter typo
+        const obj3 = { description: "A completely different text" };
+
+        // Compare with weighted string distance
+        const weightedSim1 = jediMetric(obj1, obj2, true);
+        const weightedSim2 = jediMetric(obj1, obj3, true);
+
+        // Compare without weighted string distance
+        const normalSim1 = jediMetric(obj1, obj2, false);
+        const normalSim2 = jediMetric(obj1, obj3, false);
+
+        // With weighted distance, small typos should result in higher similarity
+        expect(weightedSim1).toBeGreaterThan(normalSim1);
+
+        // Both weighted should show lower similarity for completely different strings
+        expect(weightedSim2).toBeLessThan(weightedSim1);
+
+        // Non-weighted should not have this distinction
+        expect(normalSim2).toEqual(normalSim1);
+    });
+
+    test("should handle arrays with similar strings", () => {
+        const arr1 = ["hello world", "test message", "goodbye"];
+        const arr2 = ["helo world", "test mesage", "goodby"]; // Small typos
+        const arr3 = ["different", "completely", "changed"]; // Different content
+
+        const sim1 = jediMetric(arr1, arr2, true);
+        const sim2 = jediMetric(arr1, arr3, true);
+
+        // Small typos should result in higher similarity than completely different strings
+        expect(sim1).toBeGreaterThan(sim2);
+        expect(sim1).toBeGreaterThan(0.8); // High similarity expected for small typos
+
+        expect(sim2).toBeLessThan(0.8); // Low similarity expected for different content
+    });
+
+    test("should handle case sensitivity appropriately", () => {
+        const obj1 = { name: "john smith" };
+        const obj2 = { name: "John Smith" };
+        const obj3 = { name: "JOHN SMITH" };
+        const obj4 = { name: "Jane Smith" };
+
+        const sim1 = jediMetric(obj1, obj2, true);
+        const sim2 = jediMetric(obj1, obj3, true);
+        const sim3 = jediMetric(obj1, obj4, true);
+
+        // Case differences should result in high similarity
+        expect(sim1).toBeGreaterThan(0.9);
+        expect(sim2).toBeGreaterThan(0.9);
+        // Different name should have lower similarity
+        expect(sim3).toBeLessThan(sim1);
+    });
+
+    test("should handle special characters and punctuation", () => {
+        const obj1 = { text: "hello-world" };
+        const obj2 = { text: "hello_world" };
+        const obj3 = { text: "hello world" };
+        const obj4 = { text: "hello/world" };
+
+        const similarities = [
+            jediMetric(obj1, obj2, true),
+            jediMetric(obj1, obj3, true),
+            jediMetric(obj1, obj4, true),
+        ];
+
+        // All variations should have high similarity
+        similarities.forEach((sim) => {
+            expect(sim).toBeGreaterThan(0.8);
+        });
+    });
+
+    test("should handle number-like strings", () => {
+        const obj1 = { id: "12345" };
+        const obj2 = { id: "12354" }; // transposed digits
+        const obj3 = { id: "12346" }; // one digit different
+        const obj4 = { id: "54321" }; // completely different order
+
+        const sim1 = jediMetric(obj1, obj2, true);
+        const sim2 = jediMetric(obj1, obj3, true);
+        const sim3 = jediMetric(obj1, obj4, true);
+
+        // Transposed digits should have lower similarity than one digit difference
+        // (because it requires more operations to fix)
+        expect(sim2).toBeGreaterThan(sim1);
+        // Different order should have lowest similarity
+        expect(sim3).toBeLessThan(sim2);
+    });
+
+    test("should handle multilingual strings", () => {
+        const obj1 = { text: "こんにちは" };
+        const obj2 = { text: "こんにちわ" }; // Similar Japanese
+        const obj3 = { text: "你好" }; // Different language (Chinese)
+
+        const sim1 = jediMetric(obj1, obj2, true);
+        const sim2 = jediMetric(obj1, obj3, true);
+
+        // Similar characters in same language should have higher similarity
+        expect(sim1).toBeGreaterThan(sim2);
+        expect(sim1).toBeGreaterThan(0.7);
+    });
+
+    test("same properties in different order should have high similarity", () => {
+        const obj1 = {
+            name: "John",
+            details: {
+                age: 30,
+                city: "New York",
+            },
+        };
+        const obj2 = {
+            details: {
+                city: "New York",
+                age: 30,
+            },
+            name: "John",
+        };
+        expect(jediMetric(obj1, obj2, true)).toBe(1);
+    });
+
+    test("similar property values with different ordering should have high similarity", () => {
+        const obj1 = {
+            name: "John",
+            details: {
+                age: 30,
+                city: "New York",
+            },
+        };
+        const obj2 = {
+            details: {
+                city: "New York",
+                age: 30,
+            },
+            name: "John",
+        };
+        const obj3 = {
+            deatails: {
+                city: "New York",
+                age: 30,
+            },
+            name: "John",
+        };
+        const obj4 = {
+            deatails: {
+                city: "Noo York",
+                age: 30,
+            },
+            name: "John",
+        };
+
+        const metric12 = jediMetric(obj1, obj2, true);
+        const metric13 = jediMetric(obj1, obj3, true);
+        const metric14 = jediMetric(obj1, obj4, true);
+        const metric14ns = jediMetric(obj2, obj3, false);
+
+        expect(metric12).toBe(1);
+        expect(metric13).toBeLessThan(1);
+        expect(metric14).toBeLessThan(metric13);
+        expect(metric14ns).toBeLessThan(metric14);
+    });
+
+    test("similar property values with different ordering", () => {
+        const obj1 = {
+            person: {
+                firstName: "Jonathan",
+                lastName: "Smith",
+            },
+        };
+        const obj2 = {
+            person: {
+                lastName: "Smyth",
+                firstName: "John",
+            },
+        };
+        const similarity = jediMetric(obj1, obj2, true);
+        expect(similarity).toBeGreaterThan(0.8);
+    });
+
+    test("deeply nested property ordering", () => {
+        const obj1 = {
+            level1: {
+                level2: {
+                    a: "test",
+                    b: "example",
+                },
+            },
+        };
+        const obj2 = {
+            level1: {
+                level2: {
+                    b: "example",
+                    a: "test",
+                },
+            },
+        };
+        expect(jediMetric(obj1, obj2, true)).toBe(1);
+    });
+});

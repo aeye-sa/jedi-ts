@@ -4,14 +4,17 @@
  * - Structural changes (key renames, array/object conversions): 2.0
  * - Value modifications: 1.0
  * - Array reorderings: 0.5
+ *
+ * if stringDistanceWeighted is true, the cost of string differences is weighted
+ * by the levenstein distance between the strings normalized by the maximum length
  */
-function jediMetric<T, E>(output: T, expected: E): number {
+function jediMetric<T, E>(output: T, expected: E, stringDistanceWeighted = false): number {
     // Convert JSON structures to JSON trees
     const tree1 = convertToJSONTree(output);
     const tree2 = convertToJSONTree(expected);
 
     // Calculate JEDI distance
-    const distance = calculateJEDI(tree1, tree2);
+    const distance = calculateJEDI(tree1, tree2, stringDistanceWeighted);
 
     // Get total tree sizes for max possible distance
     const size1 = getTreeSize(tree1);
@@ -80,7 +83,33 @@ function convertToJSONTree(value: any): JSONNode {
     return node;
 }
 
-function calculateJEDI(tree1: JSONNode | null, tree2: JSONNode | null): number {
+function levenshteinDistance(str1: string, str2: string): number {
+    const m = str1.length;
+    const n = str2.length;
+    const dp: number[][] = Array(m + 1).fill(0).map(() => Array(n + 1).fill(0));
+
+    for (let i = 0; i <= m; i++) dp[i][0] = i;
+    for (let j = 0; j <= n; j++) dp[0][j] = j;
+
+    for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+            if (str1[i - 1] === str2[j - 1]) {
+                dp[i][j] = dp[i - 1][j - 1];
+            }
+            else {
+                dp[i][j] = Math.min(
+                    dp[i - 1][j - 1] + 1,
+                    dp[i - 1][j] + 1,
+                    dp[i][j - 1] + 1,
+                );
+            }
+        }
+    }
+    return dp[m][n];
+}
+
+// Modified version of your existing function with Levenshtein
+function calculateJEDI(tree1: JSONNode | null, tree2: JSONNode | null, stringDistanceWeighted: boolean): number {
     if (!tree1 || !tree2) {
         // Cost for complete deletion/insertion is 2 per node
         if (!tree1) return getTreeSize(tree2) * 2;
@@ -94,35 +123,54 @@ function calculateJEDI(tree1: JSONNode | null, tree2: JSONNode | null): number {
 
     let distance = 0;
 
-    if (tree1.type === "key") {
-        if (tree1.label !== tree2.label) {
-            distance += 2.0; // Structural change (key rename)
+    if (stringDistanceWeighted) {
+        if (tree1.type === "key") {
+            if (tree1.label !== tree2.label) {
+                // Normalize Levenshtein distance to maintain scale
+                const lev = levenshteinDistance(tree1.label ?? "", tree2.label ?? "");
+                const maxLength = Math.max(tree1.label?.length ?? 0, tree2.label?.length ?? 0);
+                distance += 2.0 * (lev / maxLength); // Scale factor of 2.0 maintained
+            }
+        }
+        else if (tree1.type === "literal") {
+            if (tree1.label !== tree2.label) {
+                const lev = levenshteinDistance(tree1.label ?? "", tree2.label ?? "");
+                const maxLength = Math.max(tree1.label?.length ?? 0, tree2.label?.length ?? 0);
+                distance += 1.0 * (lev / maxLength); // Scale factor of 1.0 maintained
+            }
         }
     }
-    else if (tree1.type === "literal") {
-        if (tree1.label !== tree2.label) {
-            distance += 1.0; // Value modification
+    else {
+        if (tree1.type === "key") {
+            if (tree1.label !== tree2.label) {
+                distance += 2.0; // Structural change (key rename)
+            }
+        }
+        else if (tree1.type === "literal") {
+            if (tree1.label !== tree2.label) {
+                distance += 1.0; // Value modification
+            }
         }
     }
 
     // Calculate children distance based on node type
     if (tree1.type === "array") {
-        distance += calculateArrayDistance(tree1.children, tree2.children);
+        distance += calculateArrayDistance(tree1.children, tree2.children, stringDistanceWeighted);
     }
     else if (tree1.type === "object") {
-        distance += calculateObjectDistance(tree1.children, tree2.children);
+        distance += calculateObjectDistance(tree1.children, tree2.children, stringDistanceWeighted);
     }
     else {
         // For key nodes and literals, recurse on children
         for (let i = 0; i < tree1.children.length; i++) {
-            distance += calculateJEDI(tree1.children[i], tree2.children[i]);
+            distance += calculateJEDI(tree1.children[i], tree2.children[i], stringDistanceWeighted);
         }
     }
 
     return distance;
 }
 
-function calculateArrayDistance(arr1: JSONNode[], arr2: JSONNode[]): number {
+function calculateArrayDistance(arr1: JSONNode[], arr2: JSONNode[], stringDistanceWeighted: boolean): number {
     const m = arr1.length;
     const n = arr2.length;
 
@@ -137,7 +185,7 @@ function calculateArrayDistance(arr1: JSONNode[], arr2: JSONNode[]): number {
     const matchCosts: number[][] = Array(m).fill(0).map(() => Array(n).fill(0));
     for (let i = 0; i < m; i++) {
         for (let j = 0; j < n; j++) {
-            matchCosts[i][j] = calculateJEDI(arr1[i], arr2[j]);
+            matchCosts[i][j] = calculateJEDI(arr1[i], arr2[j], stringDistanceWeighted);
         }
     }
 
@@ -202,7 +250,7 @@ function calculateArrayDistance(arr1: JSONNode[], arr2: JSONNode[]): number {
     return totalCost + reorderCost;
 }
 
-function calculateObjectDistance(children1: JSONNode[], children2: JSONNode[]): number {
+function calculateObjectDistance(children1: JSONNode[], children2: JSONNode[], stringDistanceWeighted: boolean): number {
     let totalCost = 0;
     const used = new Set<number>();
     const matchCosts: {
@@ -214,7 +262,7 @@ function calculateObjectDistance(children1: JSONNode[], children2: JSONNode[]): 
     // Calculate all pairwise match costs
     for (let i = 0; i < children1.length; i++) {
         for (let j = 0; j < children2.length; j++) {
-            const cost = calculateJEDI(children1[i], children2[j]);
+            const cost = calculateJEDI(children1[i], children2[j], stringDistanceWeighted);
             matchCosts.push({
                 i,
                 j,
